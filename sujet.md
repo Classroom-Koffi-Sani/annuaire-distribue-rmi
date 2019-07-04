@@ -4,7 +4,7 @@ ce système distribué, plusieurs machines mettent en commun leur capacité de
 stockage pour gérer le stockage de fichiers binaires ou textuels. Ces machines
 communiquent selon une topologie virtuelle d’arbre binaire : en tant que nœud,
 je sais communiquer avec mon sous-nœud gauche et mon sous-nœud droit, mais
-je ne sais pas communiquer directement avec tout autre nœuds (voir Figure 1).
+je ne sais pas communiquer directement avec tout autre nœuds (voir figure).
 Ce service de stockage sera réalisé en RMI. Typiquement, il doit exister un objet
 accessible à distance par machine impliquée dans le système. Plus précisément,
 un seul objet distant de type Master (interface) sera placé à la racine de l’arbre et
@@ -22,6 +22,10 @@ l’item à sauvegarder (de type java.io.File ou bien byte[]) doit être divisé
 réparti équitablement sur les slaves disponibles. De façon similaire, lorsque le
 master reçoit une demande de récupération, l’item doit être reconstruit à partir
 des morceaux répartis dans le système puis renvoyé au client.
+
+![Exemple d’un ensemble de machines pouvant communiquer selon
+une topologie virtuelle d’arbre binaire](Capture.PNG)
+
 # Travail demandé
 Implémentez le système distribué Tiny DFS avec RMI, à partir du squelette
 de code donné ici : https://goo.gl/o4mQf1. Le code pourra facilement être
