@@ -1,2 +1,2 @@
-# annuaire-distribue-rmi
-Annuaire distribué RMI
+# Système de fichiers distribué RMI 
+
