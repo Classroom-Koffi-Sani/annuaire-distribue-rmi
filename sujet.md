@@ -54,7 +54,7 @@ stockage entre tous les slaves.
 
 # Démarrage du système
 Chacun des noeuds (master et slaves) sera démarré individuellement en exécutant 
-un programme Java avec des paramètre donnés (voir code), depuis les
+un programme Java avec  des paramètre donnés (voir code), depuis les
 classes MasterMain.java et SlaveMain.java. Par exemple, si j’ai un master et
 deux slaves je vais lancer une fois MasterMain.java puis deux fois SlaveMain.java.
 Vous devrez compléter ces deux classes pour créer l’objet en question et l’en-
