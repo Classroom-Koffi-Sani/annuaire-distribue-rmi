@@ -25,7 +25,7 @@ import java.util.List;
  *
  * @author Stéphane Kuma
  */
-public class ImplementMaster extends UnicastRemoteObject implements Master, FileSizeInterface {
+public class ImplementMaster extends UnicastRemoteObject implements Master {
     private String dfsRootFolder;
     private int slaveNb;
     private Slave[] slave;
@@ -103,7 +103,7 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
      * Construit l'arbre binaire de notre système de fichier
      */
     @SuppressWarnings("CallToPrintStackTrace")
-    private void construireArbreBinaire() //throws UnknownHostException
+    private void buildBinaryTree() //throws UnknownHostException
     {
         // référencement des machines esclaves
         for (int i = 0; i < this.slaveNb; i++) {
@@ -164,31 +164,31 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
      */
     private List<byte[]> getMultipleByteArray(byte[] fileContent) {
         System.out.println("Longueur du contenu du fichier : " + fileContent.length);
-        List<byte[]> resultat = new ArrayList<>();
+        List<byte[]> result = new ArrayList<>();
         // calcul du nombre de tableau à créer
-        int tailleTableauDeByte = fileContent.length / this.slaveNb;
+        int byteArrayLength = fileContent.length / this.slaveNb;
         // calcul du nombre d'octets(bytes) en trop
-        int bytePasAPorte = fileContent.length % this.slaveNb;
+        int byteNotInRange = fileContent.length % this.slaveNb;
         int compteur = 0;
         
         // création des tableaux
         for (int i = 0; i < this.slaveNb; i++) {
-            byte[] esclave;
-            if(bytePasAPorte == 0) {
-                esclave = new byte[tailleTableauDeByte];
+            byte[] pSlave;
+            if(byteNotInRange == 0) {
+                pSlave = new byte[byteArrayLength];
             }
             else {
-                esclave = new byte[tailleTableauDeByte + 1];
-                bytePasAPorte--;
+                pSlave = new byte[byteArrayLength + 1];
+                byteNotInRange--;
             }
             // Remplissage du tableau
-            for (int j = 0; j < esclave.length; j++) {
-                esclave[j] = fileContent[compteur];
+            for (int j = 0; j < pSlave.length; j++) {
+                pSlave[j] = fileContent[compteur];
                 compteur++;
             }
-            resultat.add(esclave);
+            result.add(pSlave);
         }
-        return resultat;
+        return result;
     }
     
     /***
@@ -201,7 +201,7 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
     public void saveBytes(final String filename, final byte[] fileContent) throws RemoteException {
         // Si c'est le premier appel du client, on construit l'arbre
         if(!this.isBuild) {
-            this.construireArbreBinaire();
+            this.buildBinaryTree();
             this.isBuild = true;
         }
         
@@ -213,14 +213,14 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
             public void run() {
                 System.out.println("Fil en cours d'éxécution");
                 //On découpe notre tableau en nbSlave tableau de taille égal
-                List<byte[]> fichierDivise = getMultipleByteArray(fileContent);
+                List<byte[]> divide = getMultipleByteArray(fileContent);
                 //On découpe la liste en deux pour chacun des slaves fils du master
-                List<byte[]> pesclaveGauche = new ArrayList<>(fichierDivise.subList(0, fichierDivise.size() / 2));
-                List<byte[]> pesclaveDroit = new ArrayList<>(fichierDivise.subList(fichierDivise.size() / 2, fichierDivise.size()));
+                List<byte[]> pLeftSlave = new ArrayList<>(divide.subList(0, divide.size() / 2));
+                List<byte[]> pRighttSlave = new ArrayList<>(divide.subList(divide.size() / 2, divide.size()));
                 try {
                     //Sauvegarde des données dans les slaves du master
-                    leftSlave.subSave(filename, pesclaveGauche);
-                    rightSlave.subSave(filename, pesclaveDroit);
+                    leftSlave.subSave(filename, pLeftSlave);
+                    rightSlave.subSave(filename, pRighttSlave);
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
@@ -269,7 +269,7 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
     }
 
     @SuppressWarnings("CallToPrintStackTrace")
-    private void verifieSauvegardeTerminee(String nomFichier) {
+    private void checkTerminatedSave(String nomFichier) {
         // on attend que la sauvegarde soit terminé si une sauvegarde est en cours sur le nom de fichier, 
         if (this.filelocked.containsKey(nomFichier)) {
             for (Thread recuperer : this.filelocked.get(nomFichier)) { 
@@ -292,7 +292,7 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
         return resultat;
     }
     
-    private byte[] reconstruireTableauDeByte(List<byte[]> leftList, List<byte[]> rightList) {
+    private byte[] getRecomposeByteArray(List<byte[]> leftList, List<byte[]> rightList) {
         byte[] resultat = new byte[0];
         //Pour chaque élément de chaque liste, on concatène le tableau récupéré avec le précédent
         for (int i = 0; i < leftList.size(); i++) {
@@ -308,11 +308,11 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
     public byte[] retrieveBytes(String filename) throws RemoteException {
         // on construit l'arbre si c'est le premier appel d'un esclave
         if (!this.isBuild) {
-            this.construireArbreBinaire();
+            this.buildBinaryTree();
             this.isBuild = true;
         }
         //On attend la fin des sauvegardes
-        this.verifieSauvegardeTerminee(filename);
+        this.checkTerminatedSave(filename);
         //On récupere les bytes contenus dans les machines esclaves
         List<byte[]> bytesGauche;
         bytesGauche = this.leftSlave.subRetrieve(filename);
@@ -323,23 +323,23 @@ public class ImplementMaster extends UnicastRemoteObject implements Master, File
         List<byte[]> bytesDroit;
         bytesDroit = this.rightSlave.subRetrieve(filename);
         //On retorune un tableau de byte construit sur les tableaux récupérés
-        return this.reconstruireTableauDeByte(bytesGauche, bytesDroit);
+        return this.getRecomposeByteArray(bytesGauche, bytesDroit);
     }
 
     @Override
     public long getFileSize(String fileName) throws RemoteException {
-        if(!isBuilded) {
+        if(!this.isBuild) {
             buildBinaryTree();
         }
         //Même méthode d'attente que dans le retrieveBytes().
-        checkTerminatedSave(filename);
-        long leftSize = leftSlave.getFileSubsize(filename);
+        checkTerminatedSave(fileName);
+        long leftSize = leftSlave.getFileSubsize(fileName);
         if(leftSize == -1) {
             System.err.println("Impossible de retrouver la taille, le fichier n'existe pas");
             return -1;
         }
         //on calcul et renvoit la taille total
-        long rightSize = rightSlave.getFileSubsize(filename);
+        long rightSize = rightSlave.getFileSubsize(fileName);
         return leftSize + rightSize;
     }
 
